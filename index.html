@@ -279,30 +279,55 @@ git push</code></pre>
     </div>
 
     <!-- Step 6 -->
-    <div class="step-card card shadow-sm mb-4">
+    <div class="step-card card shadow-sm mb-4 border-primary">
       <div class="card-body p-4">
         <div class="d-flex align-items-start gap-4">
           <div class="step-number bg-primary text-white">6</div>
           <div class="flex-grow-1">
-            <h4 class="fw-bold mb-2">Register Your Repository with the Instructor</h4>
-            <p class="text-muted mb-3">
-              Send your repository URL to the instructor so it can be added to the submission dashboard.
-              Do this <strong>before the deadline</strong>.
+            <h4 class="fw-bold mb-1">Notify the Instructor via GitHub Issue</h4>
+            <p class="text-muted small mb-3">
+              After committing <code>termproject.pdf</code>, open a GitHub Issue on the course repository.
+              This is the official submission notification — it creates a trackable record for both you and the instructor.
             </p>
-            <h6 class="fw-semibold">Your repository URL format:</h6>
-            <div class="code-block rounded p-3 mb-3">
-              <code>https://github.com/&lt;your-github-username&gt;/db2026-team&lt;XX&gt;</code>
+
+            <h6 class="fw-semibold">Steps:</h6>
+            <ol class="mb-3">
+              <li>Fill in the form below</li>
+              <li>Click <strong>Open Issue on GitHub</strong> — a pre-filled issue will open in a new tab</li>
+              <li>Review the content, then click <strong>Submit new issue</strong></li>
+              <li>The instructor will comment on your issue once the submission is confirmed on the dashboard</li>
+            </ol>
+
+            <!-- Issue generator -->
+            <div class="card border bg-light p-3 mb-3">
+              <div class="fw-semibold mb-2"><i class="bi bi-github me-1"></i>Submission Issue Generator</div>
+              <div class="row g-2 mb-2">
+                <div class="col-sm-3">
+                  <label class="form-label small mb-1">Team Number</label>
+                  <input type="text" class="form-control form-control-sm" id="issueTeamNum" placeholder="03" maxlength="4" />
+                </div>
+                <div class="col-sm-9">
+                  <label class="form-label small mb-1">Your Repository URL</label>
+                  <input type="text" class="form-control form-control-sm" id="issueRepoUrl" placeholder="https://github.com/alice-chen/db2026-team03" />
+                </div>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small mb-1">Team Members (Name + Student ID, comma-separated)</label>
+                <input type="text" class="form-control form-control-sm" id="issueMembers"
+                  placeholder="Alice Chen B11201001, Bob Wang B11201002" />
+              </div>
+              <button class="btn btn-primary btn-sm" id="issueBtn">
+                <i class="bi bi-box-arrow-up-right me-1"></i>Open Issue on GitHub
+              </button>
+              <div id="issueError" class="text-danger small mt-2 d-none">
+                <i class="bi bi-exclamation-circle me-1"></i>Please fill in all fields.
+              </div>
             </div>
-            <p class="text-muted mb-2">Email the instructor with:</p>
-            <ul>
-              <li>Subject: <code>[DB2026] Team &lt;XX&gt; Repository Registration</code></li>
-              <li>Team number and all member names + student IDs</li>
-              <li>Your GitHub repository URL</li>
-            </ul>
-            <div class="alert alert-info d-flex gap-2 mb-0">
-              <i class="bi bi-info-circle-fill mt-1 flex-shrink-0"></i>
-              <div>Once registered, your team appears on the <a href="dashboard.html">dashboard</a>
-              and the instructor can verify your PDF was submitted.</div>
+
+            <div class="alert alert-success d-flex gap-2 mb-0">
+              <i class="bi bi-check-circle-fill mt-1 flex-shrink-0"></i>
+              <div>Once your issue is filed, the instructor adds your repo to the dashboard and
+              your <strong>Submitted</strong> status is verified automatically.</div>
             </div>
           </div>
         </div>
@@ -445,5 +470,45 @@ git push</code></pre>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(async () => {
+  let courseRepo = 'YOUR-GITHUB-USERNAME/db2026-course';
+  try {
+    const d = await (await fetch('teams.json')).json();
+    if (d.courseRepo) courseRepo = d.courseRepo;
+  } catch (_) {}
+
+  document.getElementById('issueBtn').addEventListener('click', () => {
+    const teamNum  = document.getElementById('issueTeamNum').value.trim();
+    const repoUrl  = document.getElementById('issueRepoUrl').value.trim();
+    const members  = document.getElementById('issueMembers').value.trim();
+    const errEl    = document.getElementById('issueError');
+
+    if (!teamNum || !repoUrl || !members) {
+      errEl.classList.remove('d-none'); return;
+    }
+    errEl.classList.add('d-none');
+
+    const title = `[DB2026] Team ${teamNum.padStart(2,'0')} — Submission Notification`;
+    const body  =
+`## Term Project Submission
+
+| Field | Detail |
+|---|---|
+| **Team** | Team ${teamNum.padStart(2,'0')} |
+| **Members** | ${members} |
+| **Repository** | ${repoUrl} |
+| **Submitted file** | \`termproject.pdf\` ✅ |
+
+Please confirm receipt and add our team to the submission dashboard. Thank you!`;
+
+    const url = `https://github.com/${courseRepo}/issues/new`
+      + `?title=${encodeURIComponent(title)}`
+      + `&body=${encodeURIComponent(body)}`
+      + `&labels=submission`;
+    window.open(url, '_blank');
+  });
+})();
+</script>
 </body>
 </html>

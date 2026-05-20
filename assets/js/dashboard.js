@@ -1,5 +1,42 @@
 'use strict';
 
+/* ── Auth ───────────────────────────────────────────────── */
+const AUTH_KEY = 'db_dash_auth';
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2,'0')).join('');
+}
+
+async function initAuth(passwordHash) {
+  const overlay = el('authOverlay');
+  if (!passwordHash) { overlay.classList.add('d-none'); return; }
+  if (sessionStorage.getItem(AUTH_KEY) === passwordHash) { overlay.classList.add('d-none'); return; }
+
+  const attempt = async () => {
+    const hash = await sha256(el('authPassword').value);
+    if (hash === passwordHash) {
+      sessionStorage.setItem(AUTH_KEY, passwordHash);
+      overlay.classList.add('d-none');
+    } else {
+      el('authError').classList.remove('d-none');
+      el('authPassword').value = '';
+      el('authPassword').focus();
+    }
+  };
+
+  el('authSubmit').addEventListener('click', attempt);
+  el('authPassword').addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
+  el('authPassword').focus();
+
+  await new Promise(resolve => {
+    const observer = new MutationObserver(() => {
+      if (overlay.classList.contains('d-none')) { observer.disconnect(); resolve(); }
+    });
+    observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
+  });
+}
+
 /* ── State ──────────────────────────────────────────────── */
 let allTeams = [];
 let teamsData = {};
@@ -271,10 +308,13 @@ async function init() {
     teamsData = await res.json();
     allTeams = teamsData.teams || [];
   } catch (e) {
+    el('authOverlay').classList.add('d-none');
     el('gridView').innerHTML = `<div class="col-12"><div class="alert alert-danger">
       <strong>Error loading teams.json:</strong> ${e.message}</div></div>`;
     return;
   }
+
+  await initAuth(teamsData.dashboardPasswordHash || null);
 
   // Course info
   const c = teamsData.course || {};

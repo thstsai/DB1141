@@ -1,4 +1,6 @@
 {
+  "courseRepo": "YOUR-GITHUB-USERNAME/db2026-course",
+  "dashboardPasswordHash": "01d58c1ac3df6d023d869e50bf78e2f9185332c281f665fd53f6dbd7592df45e",
   "course": {
     "name": "Database Management",
     "code": "IM3001",

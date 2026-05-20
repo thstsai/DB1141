@@ -10,6 +10,31 @@
 </head>
 <body>
 
+<!-- ── Password Overlay ────────────────────────────────────────────────── -->
+<div id="authOverlay">
+  <div class="auth-box">
+    <div class="text-center mb-4">
+      <i class="bi bi-shield-lock-fill text-primary" style="font-size:3rem"></i>
+      <h4 class="fw-bold mt-2 mb-0">Teacher Dashboard</h4>
+      <p class="text-muted small mt-1">Enter the dashboard password to continue</p>
+    </div>
+    <div id="authError" class="alert alert-danger d-none small py-2 mb-3">
+      <i class="bi bi-x-circle me-1"></i>Incorrect password. Please try again.
+    </div>
+    <div class="input-group mb-3">
+      <input type="password" class="form-control" id="authPassword" placeholder="Password" autocomplete="current-password" />
+      <button class="btn btn-primary" id="authSubmit">
+        <i class="bi bi-unlock me-1"></i>Unlock
+      </button>
+    </div>
+    <div class="text-center small text-muted">
+      <a href="index.html" class="text-muted text-decoration-none">
+        <i class="bi bi-arrow-left me-1"></i>Back to Student Guide
+      </a>
+    </div>
+  </div>
+</div>
+
 <!-- ── Navbar ─────────────────────────────────────────────────────────── -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow">
   <div class="container-fluid px-4">
