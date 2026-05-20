@@ -1,0 +1,43 @@
+{
+  "course": {
+    "name": "Database Management",
+    "code": "IM3001",
+    "semester": "Spring 2026",
+    "department": "Department of Information Management",
+    "instructor": "Prof. Chang"
+  },
+  "deadline": "2026-06-30T23:59:59",
+  "filename": "termproject.pdf",
+  "teams": [
+    {
+      "id": "T01",
+      "name": "Team 01",
+      "members": [
+        { "name": "Alice Chen",  "studentId": "B11201001" },
+        { "name": "Bob Wang",    "studentId": "B11201002" },
+        { "name": "Carol Lin",   "studentId": "B11201003" }
+      ],
+      "repo": "alice-chen-im/db2026-team01"
+    },
+    {
+      "id": "T02",
+      "name": "Team 02",
+      "members": [
+        { "name": "David Liu",   "studentId": "B11201010" },
+        { "name": "Emma Huang",  "studentId": "B11201011" }
+      ],
+      "repo": "david-liu-im/db2026-team02"
+    },
+    {
+      "id": "T03",
+      "name": "Team 03",
+      "members": [
+        { "name": "Frank Wu",    "studentId": "B11201020" },
+        { "name": "Grace Cheng", "studentId": "B11201021" },
+        { "name": "Henry Tsai",  "studentId": "B11201022" },
+        { "name": "Iris Chang",  "studentId": "B11201023" }
+      ],
+      "repo": "frankwu-im/db2026-team03"
+    }
+  ]
+}
