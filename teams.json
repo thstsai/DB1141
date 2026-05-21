@@ -9,7 +9,10 @@
     "instructor": "Prof. Chang"
   },
   "deadline": "2026-06-30T23:59:59",
-  "filename": "termproject.pdf",
+  "requiredFiles": [
+    { "path": "README.md",           "label": "README" },
+    { "path": "database/schema.sql", "label": "DB Schema" }
+  ],
   "teams": [
     {
       "id": "T01",

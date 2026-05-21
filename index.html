@@ -216,9 +216,58 @@ git commit -m "Add ER diagram and SQL schema"
 git push</code></pre>
             </div>
 
+            <h6 class="fw-semibold mt-3">Option C — Visual Studio 2022 <span class="badge bg-success-subtle text-success ms-1" style="font-size:.7rem">Recommended for this project</span></h6>
+            <p class="text-muted small mb-2">
+              Visual Studio has built-in Git &amp; GitHub integration — no separate Git installation needed.
+            </p>
+            <ol class="mb-2">
+              <li>
+                <strong>Sign in to GitHub inside VS</strong><br>
+                <span class="text-muted small">Tools → Options → Accounts → Add → GitHub</span>
+              </li>
+              <li>
+                <strong>Clone your repository</strong><br>
+                <span class="text-muted small">Git → Clone Repository → paste your GitHub URL → Clone</span>
+              </li>
+              <li>
+                <strong>Create your .NET / C# solution inside the cloned folder</strong><br>
+                <span class="text-muted small">File → New → Project → save it into the cloned folder so VS tracks it automatically</span>
+              </li>
+              <li>
+                <strong>Commit your changes</strong><br>
+                <span class="text-muted small">View → Git Changes → stage files → write a message → <strong>Commit All</strong></span>
+              </li>
+              <li>
+                <strong>Push to GitHub</strong><br>
+                <span class="text-muted small">Click the <strong>↑ Push</strong> button in Git Changes, or Git → Push</span>
+              </li>
+            </ol>
+
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <div class="border rounded p-2 small">
+                  <div class="fw-semibold mb-1 text-primary"><i class="bi bi-keyboard me-1"></i>Useful VS shortcuts</div>
+                  <table class="table table-sm table-borderless mb-0 small">
+                    <tr><td><kbd>Ctrl+Shift+G</kbd></td><td>Open Git Changes</td></tr>
+                    <tr><td><kbd>Ctrl+`</kbd></td><td>Open Terminal</td></tr>
+                    <tr><td>Git menu → Fetch / Pull</td><td>Get teammates' changes</td></tr>
+                  </table>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="border rounded p-2 small">
+                  <div class="fw-semibold mb-1 text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Add a <code>.gitignore</code></div>
+                  When creating the solution, check <strong>Add to source control</strong> and VS auto-generates
+                  a <code>.gitignore</code> that excludes large build folders (<code>bin/</code>, <code>obj/</code>).
+                  If not, add one at: <a href="https://github.com/github/gitignore/blob/main/VisualStudio.gitignore" target="_blank">github.com/github/gitignore</a>
+                </div>
+              </div>
+            </div>
+
             <div class="alert alert-success d-flex gap-2 mb-0">
               <i class="bi bi-lightbulb-fill mt-1 flex-shrink-0"></i>
               <div><strong>Tip:</strong> Meaningful commit messages like <em>"Add normalization analysis for 3NF"</em>
+              or <em>"Implement enrollment stored procedure"</em>
               help the instructor see your progress and may earn participation credit.</div>
             </div>
           </div>
@@ -232,47 +281,114 @@ git push</code></pre>
         <div class="d-flex align-items-start gap-4">
           <div class="step-number bg-success text-white">5</div>
           <div class="flex-grow-1">
-            <h4 class="fw-bold mb-2">Upload <code>termproject.pdf</code> Before the Deadline</h4>
+            <h4 class="fw-bold mb-1">Commit All Required Deliverables Before the Deadline</h4>
             <p class="text-muted mb-3">
-              This is the most important step. The file name must be <strong>exactly</strong>
-              <code>termproject.pdf</code> (all lowercase) and placed in the
-              <strong>root (top level)</strong> of the repository.
+              You do <strong>not</strong> submit a PDF report. Instead, commit the actual project
+              outputs specified in the course requirements to your GitHub repository.
+              The instructor's dashboard automatically checks for the required files.
             </p>
 
+            <!-- Deliverables table -->
+            <h6 class="fw-semibold mb-2">Required deliverables (from project specification)</h6>
+            <div class="table-responsive mb-3">
+              <table class="table table-bordered table-sm small align-middle">
+                <thead class="table-primary">
+                  <tr>
+                    <th>#</th><th>Deliverable</th><th>What to commit</th><th>Suggested path</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td><strong>Database Design</strong></td>
+                    <td>ERD diagram image + SQL schema script (CREATE TABLE, PK/FK constraints)</td>
+                    <td><code>database/schema.sql</code><br><code>database/erd.png</code></td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td><strong>Application Source Code</strong></td>
+                    <td>C# / .NET solution (Visual Studio project files, all <code>.cs</code> files)</td>
+                    <td><code>src/YourSolution.sln</code></td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td><strong>Documentation</strong></td>
+                    <td>System architecture, database schema explanation, user guide, setup instructions</td>
+                    <td><code>docs/</code> or <code>README.md</code></td>
+                  </tr>
+                  <tr>
+                    <td>4</td>
+                    <td><strong>Presentation</strong></td>
+                    <td>Slides demonstrating key features, technical design, and challenges</td>
+                    <td><code>presentation/slides.pptx</code></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Repo structure -->
+            <h6 class="fw-semibold mb-2">Recommended repository structure</h6>
             <div class="row g-3 mb-3">
-              <div class="col-md-6">
-                <div class="border rounded p-3 h-100">
-                  <div class="fw-semibold mb-2 text-success"><i class="bi bi-check-circle me-1"></i>Correct structure</div>
-                  <div class="code-block rounded p-2">
-                    <pre class="mb-0 small"><code>db2026-team03/
-├── <strong>termproject.pdf</strong>  ← required
-├── README.md
-├── schema.sql
-└── report/</code></pre>
-                  </div>
+              <div class="col-md-7">
+                <div class="code-block rounded p-3">
+                  <pre class="mb-0 small"><code>db2026-team03/
+├── README.md               <span class="text-success">← project overview (required)</span>
+├── src/                    <span class="text-success">← C# .NET source code (required)</span>
+│   ├── UniversityMS.sln
+│   └── UniversityMS/
+│       ├── Controllers/
+│       ├── Models/
+│       └── Views/
+├── database/               <span class="text-success">← DB design (required)</span>
+│   ├── schema.sql          <span class="text-success">← checked by dashboard</span>
+│   ├── erd.png
+│   └── seed_data.sql
+├── docs/
+│   ├── architecture.md
+│   └── user_guide.md
+└── presentation/
+    └── slides.pptx</code></pre>
                 </div>
               </div>
-              <div class="col-md-6">
-                <div class="border rounded p-3 h-100">
-                  <div class="fw-semibold mb-2 text-danger"><i class="bi bi-x-circle me-1"></i>Wrong (will not be detected)</div>
-                  <div class="code-block rounded p-2">
-                    <pre class="mb-0 small"><code>db2026-team03/
-└── report/
-    └── TermProject.pdf  ← wrong name
-    └── termproject.PDF  ← wrong ext</code></pre>
-                  </div>
+              <div class="col-md-5 d-flex flex-column gap-2">
+                <div class="alert alert-success mb-0 small">
+                  <i class="bi bi-check-circle-fill me-1"></i>
+                  <strong>Dashboard checks for:</strong><br>
+                  <code>README.md</code> and <code>database/schema.sql</code>.<br>
+                  Both must exist for status to show <strong>Complete</strong>.
+                </div>
+                <div class="alert alert-warning mb-0 small">
+                  <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                  <strong>Do NOT commit:</strong><br>
+                  <code>bin/</code>, <code>obj/</code>, <code>.vs/</code> folders.
+                  These are auto-generated and bloat the repo. Visual Studio's
+                  <code>.gitignore</code> excludes them automatically.
                 </div>
               </div>
             </div>
 
-            <h6 class="fw-semibold">How to upload via GitHub web:</h6>
-            <ol>
-              <li>Open your repository's main page</li>
-              <li>Click <strong>Add file → Upload files</strong></li>
-              <li>Select your PDF — make sure it is named <code>termproject.pdf</code> on your computer</li>
-              <li>Write commit message: <em>"Submit term project final version"</em></li>
-              <li>Click <strong>Commit changes</strong></li>
-            </ol>
+            <!-- README template -->
+            <h6 class="fw-semibold mb-2">Minimum <code>README.md</code> content</h6>
+            <div class="code-block rounded p-3 mb-0">
+              <pre class="mb-0 small"><code><span class="text-success"># University Management System — Team 03</span>
+
+<span class="text-success">## Team Members</span>
+| Name | Student ID |
+|---|---|
+| Alice Chen | B11201001 |
+| Bob Wang   | B11201002 |
+
+<span class="text-success">## Tech Stack</span>
+- Language: C# / .NET Framework
+- Database: MS-SQL Server
+- IDE: Visual Studio 2022
+
+<span class="text-success">## How to Run</span>
+1. Restore NuGet packages
+2. Update connection string in `appsettings.json`
+3. Run `database/schema.sql` on your SQL Server
+4. Press F5 in Visual Studio</code></pre>
+            </div>
           </div>
         </div>
       </div>

@@ -38,12 +38,12 @@ async function initAuth(passwordHash) {
 }
 
 /* ── State ──────────────────────────────────────────────── */
-let allTeams = [];
-let teamsData = {};
-let githubToken = localStorage.getItem('gh_token') || '';
-let currentView = 'grid';
+let allTeams     = [];
+let teamsData    = {};
+let githubToken  = localStorage.getItem('gh_token') || '';
+let currentView  = 'grid';
 let statusFilter = 'all';
-let searchQuery = '';
+let searchQuery  = '';
 let checkResults = {};   // teamId → result object
 
 /* ── GitHub API ─────────────────────────────────────────── */
@@ -53,54 +53,71 @@ function apiHeaders() {
   return h;
 }
 
-async function checkRepo(repo) {
-  const filename = teamsData.filename || 'termproject.pdf';
-  const base = `https://api.github.com/repos/${repo}`;
-
-  try {
-    // Check if file exists
-    const fileRes = await fetch(`${base}/contents/${filename}`, { headers: apiHeaders() });
-
-    if (fileRes.status === 404) {
-      // Repo may exist but file is missing — or repo itself is missing
-      const repoRes = await fetch(base, { headers: apiHeaders() });
-      if (repoRes.status === 404) return { status: 'no-repo' };
-      return { status: 'missing' };
-    }
-
-    if (!fileRes.ok) {
-      const remaining = fileRes.headers.get('X-RateLimit-Remaining');
-      if (remaining === '0') return { status: 'error', message: 'API rate limit reached. Add a token.' };
-      return { status: 'error', message: `HTTP ${fileRes.status}` };
-    }
-
-    const fileData = await fileRes.json();
-
+async function checkFile(repo, path) {
+  const res = await fetch(
+    `https://api.github.com/repos/${repo}/contents/${path}`,
+    { headers: apiHeaders() }
+  );
+  if (res.ok) {
+    const data = await res.json();
     // Get commit date for this file
-    let submittedAt = null;
+    let committedAt = null;
     try {
-      const commitRes = await fetch(
-        `${base}/commits?path=${filename}&per_page=1`,
+      const cr = await fetch(
+        `https://api.github.com/repos/${repo}/commits?path=${path}&per_page=1`,
         { headers: apiHeaders() }
       );
-      if (commitRes.ok) {
-        const commits = await commitRes.json();
-        if (commits.length) submittedAt = commits[0].commit.committer.date;
+      if (cr.ok) {
+        const commits = await cr.json();
+        if (commits.length) committedAt = commits[0].commit.committer.date;
       }
     } catch (_) {}
-
-    return {
-      status: 'submitted',
-      size: fileData.size,
-      sha: fileData.sha,
-      downloadUrl: fileData.download_url,
-      htmlUrl: fileData.html_url,
-      submittedAt
-    };
-
-  } catch (e) {
-    return { status: 'error', message: e.message };
+    return { found: true, size: data.size, htmlUrl: data.html_url, committedAt };
   }
+  if (res.status === 404) return { found: false };
+  const remaining = res.headers.get('X-RateLimit-Remaining');
+  if (remaining === '0') throw new Error('API rate limit reached — add a GitHub token.');
+  throw new Error(`HTTP ${res.status}`);
+}
+
+async function checkRepo(team) {
+  const required = teamsData.requiredFiles || [];
+  const base = `https://api.github.com/repos/${team.repo}`;
+
+  // Verify repo exists first
+  try {
+    const repoRes = await fetch(base, { headers: apiHeaders() });
+    if (repoRes.status === 404) return { status: 'no-repo', files: [] };
+    if (!repoRes.ok) throw new Error(`HTTP ${repoRes.status}`);
+  } catch (e) {
+    return { status: 'error', message: e.message, files: [] };
+  }
+
+  // Check each required file
+  const files = [];
+  try {
+    for (const req of required) {
+      const result = await checkFile(team.repo, req.path);
+      files.push({ path: req.path, label: req.label, ...result });
+    }
+  } catch (e) {
+    return { status: 'error', message: e.message, files };
+  }
+
+  const foundCount = files.filter(f => f.found).length;
+  const totalCount = files.length;
+
+  let status;
+  if (totalCount === 0)          status = 'complete';   // no requirements defined
+  else if (foundCount === 0)     status = 'missing';
+  else if (foundCount < totalCount) status = 'partial';
+  else                           status = 'complete';
+
+  // Latest commit among found files
+  const dates = files.filter(f => f.committedAt).map(f => new Date(f.committedAt));
+  const latestDate = dates.length ? new Date(Math.max(...dates)).toISOString() : null;
+
+  return { status, files, foundCount, totalCount, latestDate };
 }
 
 /* ── Formatting helpers ─────────────────────────────────── */
@@ -113,8 +130,7 @@ function fmtBytes(b) {
 
 function fmtDate(iso) {
   if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleString('en-US', {
+  return new Date(iso).toLocaleString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit'
   });
@@ -122,7 +138,8 @@ function fmtDate(iso) {
 
 function statusBadge(status) {
   const map = {
-    submitted: ['status-submitted', '<i class="bi bi-check-circle-fill me-1"></i>Submitted'],
+    complete:  ['status-complete',  '<i class="bi bi-check-circle-fill me-1"></i>Complete'],
+    partial:   ['status-partial',   '<i class="bi bi-exclamation-circle-fill me-1"></i>Partial'],
     missing:   ['status-missing',   '<i class="bi bi-x-circle-fill me-1"></i>Not Submitted'],
     checking:  ['status-checking',  '<i class="bi bi-hourglass-split me-1"></i>Checking…'],
     error:     ['status-error',     '<i class="bi bi-exclamation-circle me-1"></i>Error'],
@@ -132,25 +149,37 @@ function statusBadge(status) {
   return `<span class="status-badge ${cls}">${label}</span>`;
 }
 
-function deadlinePassed() {
-  return teamsData.deadline && new Date(teamsData.deadline) < new Date();
+function fileChecklist(files) {
+  if (!files || !files.length) return '';
+  return files.map(f => `
+    <div class="file-check-row d-flex align-items-center gap-1 mt-1">
+      ${f.found
+        ? `<i class="bi bi-check-circle-fill found"></i>
+           <a href="${f.htmlUrl}" target="_blank" class="text-decoration-none found">${f.label}</a>
+           <span class="text-muted ms-auto">${fmtBytes(f.size)}</span>`
+        : `<i class="bi bi-x-circle-fill missing"></i>
+           <span class="missing">${f.label}</span>
+           <span class="text-muted ms-auto small">missing</span>`
+      }
+    </div>`).join('');
 }
 
 /* ── Summary stats ──────────────────────────────────────── */
 function updateStats() {
-  const total = allTeams.length;
-  const submitted = allTeams.filter(t => checkResults[t.id]?.status === 'submitted').length;
-  const missing   = allTeams.filter(t => checkResults[t.id]?.status === 'missing').length;
-  const pending   = allTeams.filter(t => !checkResults[t.id] || checkResults[t.id].status === 'checking').length;
+  const total    = allTeams.length;
+  const complete = allTeams.filter(t => checkResults[t.id]?.status === 'complete').length;
+  const partial  = allTeams.filter(t => checkResults[t.id]?.status === 'partial').length;
+  const missing  = allTeams.filter(t => ['missing','no-repo'].includes(checkResults[t.id]?.status)).length;
+  const pending  = allTeams.filter(t => !checkResults[t.id] || checkResults[t.id].status === 'checking').length;
 
-  el('statTotal').textContent     = total;
-  el('statSubmitted').textContent = submitted;
-  el('statMissing').textContent   = missing;
-  el('statPending').textContent   = pending;
+  el('statTotal').textContent    = total;
+  el('statSubmitted').textContent = complete;
+  el('statPartial').textContent  = partial;
+  el('statMissing').textContent  = missing + (pending ? ` (+${pending})` : '');
 
-  const pct = total ? Math.round((submitted / total) * 100) : 0;
-  el('progressBar').style.width   = pct + '%';
-  el('progressPct').textContent   = pct + '%';
+  const pct = total ? Math.round(((complete + partial * 0.5) / total) * 100) : 0;
+  el('progressBar').style.width  = pct + '%';
+  el('progressPct').textContent  = pct + '%';
 }
 
 /* ── Render grid view ───────────────────────────────────── */
@@ -166,9 +195,8 @@ function renderGrid() {
   }
 
   visible.forEach(team => {
-    const r = checkResults[team.id] || { status: 'checking' };
+    const r = checkResults[team.id] || { status: 'checking', files: [] };
     const repoUrl = `https://github.com/${team.repo}`;
-    const fileUrl = r.htmlUrl || `${repoUrl}/blob/main/${teamsData.filename}`;
 
     const memberList = team.members.map(m =>
       `<li class="list-group-item d-flex justify-content-between py-1 px-0 border-0 bg-transparent">
@@ -177,15 +205,15 @@ function renderGrid() {
       </li>`
     ).join('');
 
-    const extraInfo = r.status === 'submitted' ? `
-      <div class="mt-3 pt-3 border-top small text-muted">
-        <div><i class="bi bi-file-earmark-pdf me-1"></i>Size: <strong>${fmtBytes(r.size)}</strong></div>
-        <div><i class="bi bi-clock-history me-1"></i>Submitted: <strong>${fmtDate(r.submittedAt)}</strong></div>
-        <a href="${fileUrl}" target="_blank" class="btn btn-sm btn-outline-success mt-2 w-100">
-          <i class="bi bi-eye me-1"></i>View PDF on GitHub
-        </a>
-      </div>` : (r.status === 'error' ? `
-      <div class="mt-2 small text-danger"><i class="bi bi-exclamation-triangle me-1"></i>${r.message || 'Unknown error'}</div>` : '');
+    const extra = r.status === 'error'
+      ? `<div class="mt-2 small text-danger"><i class="bi bi-exclamation-triangle me-1"></i>${r.message || 'Unknown error'}</div>`
+      : (r.files?.length
+          ? `<div class="mt-3 pt-3 border-top">
+               <div class="small fw-semibold text-muted mb-1">Deliverables</div>
+               ${fileChecklist(r.files)}
+               ${r.latestDate ? `<div class="text-muted mt-2" style="font-size:.75rem">
+                 <i class="bi bi-clock-history me-1"></i>Last push: ${fmtDate(r.latestDate)}</div>` : ''}
+             </div>` : '');
 
     grid.innerHTML += `
       <div class="col-sm-6 col-xl-4">
@@ -199,7 +227,7 @@ function renderGrid() {
             <a href="${repoUrl}" target="_blank" class="btn btn-outline-secondary btn-sm w-100 mt-1">
               <i class="bi bi-github me-1"></i>${team.repo}
             </a>
-            ${extraInfo}
+            ${extra}
           </div>
         </div>
       </div>`;
@@ -213,31 +241,30 @@ function renderTable() {
   tbody.innerHTML = '';
 
   visible.forEach(team => {
-    const r = checkResults[team.id] || { status: 'checking' };
+    const r = checkResults[team.id] || { status: 'checking', files: [] };
     const repoUrl = `https://github.com/${team.repo}`;
-    const fileUrl = r.htmlUrl || `${repoUrl}/blob/main/${teamsData.filename}`;
-
     const members = team.members.map(m => `${m.name} (${m.studentId})`).join(', ');
 
-    const pdfLink = r.status === 'submitted'
-      ? `<a href="${fileUrl}" target="_blank" class="btn btn-outline-success btn-sm">
-           <i class="bi bi-eye me-1"></i>View
-         </a>` : '—';
+    const filesHtml = (r.files || []).map(f =>
+      f.found
+        ? `<a href="${f.htmlUrl}" target="_blank" class="badge bg-success-subtle text-success text-decoration-none me-1">${f.label}</a>`
+        : `<span class="badge bg-danger-subtle text-danger me-1">${f.label} ✗</span>`
+    ).join('');
 
     tbody.innerHTML += `
       <tr>
         <td class="fw-semibold">${team.name}</td>
         <td class="small text-muted">${members}</td>
-        <td><a href="${repoUrl}" target="_blank" class="text-decoration-none small"><i class="bi bi-github me-1"></i>${team.repo}</a></td>
+        <td><a href="${repoUrl}" target="_blank" class="text-decoration-none small">
+          <i class="bi bi-github me-1"></i>${team.repo}</a></td>
         <td>${statusBadge(r.status)}</td>
-        <td class="small">${fmtBytes(r.size)}</td>
-        <td class="small">${fmtDate(r.submittedAt)}</td>
-        <td>${pdfLink}</td>
+        <td>${filesHtml || '—'}</td>
+        <td class="small">${fmtDate(r.latestDate)}</td>
       </tr>`;
   });
 
   if (!visible.length) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No teams match the current filter.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No teams match the current filter.</td></tr>`;
   }
 }
 
@@ -245,8 +272,11 @@ function renderTable() {
 function filteredTeams() {
   return allTeams.filter(team => {
     const r = checkResults[team.id];
-    const matchStatus = statusFilter === 'all' || (r && r.status === statusFilter) ||
-      (statusFilter === 'missing' && (!r || r.status === 'missing' || r.status === 'no-repo'));
+    const matchStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'complete' && r?.status === 'complete') ||
+      (statusFilter === 'partial'  && r?.status === 'partial') ||
+      (statusFilter === 'missing'  && (!r || ['missing','no-repo','checking'].includes(r.status)));
     const q = searchQuery.toLowerCase();
     const matchSearch = !q ||
       team.name.toLowerCase().includes(q) ||
@@ -273,27 +303,23 @@ async function checkAll() {
   el('btnCheck').disabled = true;
   el('btnCheck').innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Checking…';
 
-  // Reset to checking state
-  allTeams.forEach(t => { checkResults[t.id] = { status: 'checking' }; });
+  allTeams.forEach(t => { checkResults[t.id] = { status: 'checking', files: [] }; });
   updateStats();
   render();
 
-  // Check concurrently (max 4 at a time to avoid rate limit)
   const queue = [...allTeams];
-  const concurrency = 4;
+  const concurrency = 3;
 
   async function worker() {
     while (queue.length) {
       const team = queue.shift();
-      const result = await checkRepo(team.repo);
-      checkResults[team.id] = result;
+      checkResults[team.id] = await checkRepo(team);
       updateStats();
       render();
     }
   }
 
-  const workers = Array.from({ length: Math.min(concurrency, allTeams.length) }, worker);
-  await Promise.all(workers);
+  await Promise.all(Array.from({ length: Math.min(concurrency, allTeams.length) }, worker));
 
   el('btnCheck').disabled = false;
   el('btnCheck').innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Refresh Status';
@@ -306,7 +332,7 @@ async function init() {
     const res = await fetch('teams.json');
     if (!res.ok) throw new Error('Cannot load teams.json');
     teamsData = await res.json();
-    allTeams = teamsData.teams || [];
+    allTeams  = teamsData.teams || [];
   } catch (e) {
     el('authOverlay').classList.add('d-none');
     el('gridView').innerHTML = `<div class="col-12"><div class="alert alert-danger">
@@ -322,9 +348,18 @@ async function init() {
   el('courseMeta').textContent  = [c.code, c.semester, c.department].filter(Boolean).join(' · ');
   if (teamsData.deadline) {
     const d = new Date(teamsData.deadline);
-    el('deadlineVal').textContent = d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) +
-      ' ' + d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
-    if (deadlinePassed()) el('deadlineVal').classList.add('text-danger');
+    el('deadlineVal').textContent = d.toLocaleDateString('en-US', {
+      year:'numeric', month:'long', day:'numeric'
+    }) + ' ' + d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+    if (new Date(teamsData.deadline) < new Date()) el('deadlineVal').classList.add('text-danger');
+  }
+
+  // Required files legend
+  const req = teamsData.requiredFiles || [];
+  if (req.length) {
+    el('reqFilesList').innerHTML = req.map(f =>
+      `<code class="me-2">${f.path}</code>`
+    ).join('');
   }
 
   // Token UI
@@ -333,7 +368,7 @@ async function init() {
     el('tokenStatus').innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Token loaded</span>';
   }
 
-  // Wire controls
+  // Controls
   el('btnCheck').addEventListener('click', checkAll);
   el('tokenSave').addEventListener('click', () => {
     githubToken = el('tokenInput').value.trim();
@@ -348,7 +383,6 @@ async function init() {
     localStorage.removeItem('gh_token');
     el('tokenStatus').innerHTML = '<span class="text-muted">Token cleared</span>';
   });
-
   el('viewGrid').addEventListener('click', () => {
     currentView = 'grid';
     el('viewGrid').classList.add('active');
@@ -361,15 +395,8 @@ async function init() {
     el('viewGrid').classList.remove('active');
     render();
   });
-
-  el('statusFilter').addEventListener('change', e => {
-    statusFilter = e.target.value;
-    render();
-  });
-  el('searchInput').addEventListener('input', e => {
-    searchQuery = e.target.value;
-    render();
-  });
+  el('statusFilter').addEventListener('change', e => { statusFilter = e.target.value; render(); });
+  el('searchInput').addEventListener('input',  e => { searchQuery  = e.target.value;  render(); });
   el('exportBtn').addEventListener('click', exportCSV);
 
   updateStats();
@@ -379,25 +406,35 @@ async function init() {
 
 /* ── Export CSV ─────────────────────────────────────────── */
 function exportCSV() {
-  const rows = [['Team', 'Members', 'Student IDs', 'Repository', 'Status', 'File Size', 'Submitted At']];
+  const req = teamsData.requiredFiles || [];
+  const headers = ['Team','Members','Student IDs','Repository','Status',
+    ...req.map(f => f.label), 'Last Push'];
+  const rows = [headers];
+
   allTeams.forEach(team => {
     const r = checkResults[team.id] || {};
+    const fileStatuses = req.map(f => {
+      const found = (r.files || []).find(x => x.path === f.path);
+      return found?.found ? 'Yes' : 'No';
+    });
     rows.push([
       team.name,
       team.members.map(m => m.name).join('; '),
       team.members.map(m => m.studentId).join('; '),
       `https://github.com/${team.repo}`,
       r.status || 'unknown',
-      fmtBytes(r.size),
-      r.submittedAt || ''
+      ...fileStatuses,
+      r.latestDate || ''
     ]);
   });
+
   const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'db2026-submissions.csv'; a.click();
-  URL.revokeObjectURL(url);
+  a.href = URL.createObjectURL(blob);
+  a.download = 'db2026-submissions.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 /* ── Util ───────────────────────────────────────────────── */

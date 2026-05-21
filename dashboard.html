@@ -100,7 +100,20 @@
           </div>
           <div>
             <div class="h3 fw-bold mb-0 text-success" id="statSubmitted">—</div>
-            <div class="text-muted small">Submitted</div>
+            <div class="text-muted small">Complete</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="dash-stat-card">
+        <div class="d-flex align-items-center gap-3">
+          <div class="dash-stat-icon text-warning" style="background:#ffedd5">
+            <i class="bi bi-exclamation-circle-fill"></i>
+          </div>
+          <div>
+            <div class="h3 fw-bold mb-0 text-warning" id="statPartial">—</div>
+            <div class="text-muted small">Partial</div>
           </div>
         </div>
       </div>
@@ -114,19 +127,6 @@
           <div>
             <div class="h3 fw-bold mb-0 text-danger" id="statMissing">—</div>
             <div class="text-muted small">Not Submitted</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="dash-stat-card">
-        <div class="d-flex align-items-center gap-3">
-          <div class="dash-stat-icon bg-warning bg-opacity-10 text-warning">
-            <i class="bi bi-hourglass-split"></i>
-          </div>
-          <div>
-            <div class="h3 fw-bold mb-0 text-warning" id="statPending">—</div>
-            <div class="text-muted small">Pending Check</div>
           </div>
         </div>
       </div>
@@ -176,6 +176,13 @@
     </div>
   </div>
 
+  <!-- ── Required files legend ────────────────────────────────────────────── -->
+  <div class="alert alert-light border mb-4 small py-2">
+    <i class="bi bi-list-check text-primary me-1"></i>
+    <strong>Checked files per team:</strong>
+    <span id="reqFilesList" class="ms-1 text-muted">loading…</span>
+  </div>
+
   <!-- ── Filter & view controls ─────────────────────────────────────────── -->
   <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
     <div class="input-group input-group-sm" style="max-width:260px">
@@ -184,9 +191,9 @@
     </div>
     <select class="form-select form-select-sm" id="statusFilter" style="max-width:180px">
       <option value="all">All Teams</option>
-      <option value="submitted">Submitted</option>
+      <option value="complete">Complete</option>
+      <option value="partial">Partial</option>
       <option value="missing">Not Submitted</option>
-      <option value="error">Error / Unknown</option>
     </select>
     <div class="btn-group btn-group-sm ms-auto" role="group">
       <button type="button" class="btn btn-outline-secondary active" id="viewGrid">
@@ -217,25 +224,29 @@
               <th>Members</th>
               <th>Repository</th>
               <th>Status</th>
-              <th>File Size</th>
-              <th>Submitted At</th>
-              <th>View PDF</th>
+              <th>Deliverables</th>
+              <th>Last Push</th>
             </tr>
           </thead>
           <tbody id="tableBody">
-            <tr><td colspan="7" class="text-center text-muted py-4">Loading…</td></tr>
+            <tr><td colspan="6" class="text-center text-muted py-4">Loading…</td></tr>
           </tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <!-- ── How to add teams note ──────────────────────────────────────────── -->
+  <!-- ── How to add teams / configure note ────────────────────────────────── -->
   <div class="alert alert-secondary mt-4 small">
     <i class="bi bi-info-circle me-1"></i>
-    <strong>To add or update teams:</strong> edit the <code>teams.json</code> file in this repository,
-    then commit and push. Each entry needs a <code>repo</code> field in the format
-    <code>github-username/repo-name</code>. The dashboard reads this file on every page load.
+    <strong>Configuration:</strong>
+    Edit <code>teams.json</code> and commit to update this dashboard.
+    <ul class="mb-0 mt-1">
+      <li><code>teams[].repo</code> — student repo in <code>github-username/repo-name</code> format</li>
+      <li><code>requiredFiles</code> — list of deliverable file paths the dashboard verifies (e.g. <code>database/schema.sql</code>)</li>
+      <li><code>dashboardPasswordHash</code> — SHA-256 hash of the dashboard password</li>
+      <li><code>courseRepo</code> — this repo's path, used for the student GitHub Issue notification link</li>
+    </ul>
   </div>
 
 </div>
